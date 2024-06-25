@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <ctime>
 
 using namespace std;
 
@@ -19,13 +20,34 @@ void lerImagem(imagemPGM &imagem, ifstream &arquivoleitura) {
     arquivoleitura >> imagem.linhas;
     arquivoleitura >> imagem.valormax;
 
-    // Alocando Memória para a variável pixels conforme as colunas e linhas da matriz presente na imagem.
+    // Alocando Memória para a variável pixels conforme as colunas e linhas da matriz presente na imagem
     imagem.pixels = new int*[imagem.linhas];
     for (int i = 0; i < imagem.linhas; i++) {
         imagem.pixels[i] = new int[imagem.colunas];
         for (int j = 0; j < imagem.colunas; j++) {
             arquivoleitura >> imagem.pixels[i][j];
         }
+    }
+}
+
+// Função para alterar o brilho da imagem
+void alterarbrilho(imagemPGM &imagem, int opbrilho, int brilho) {
+    if (opbrilho == 1) { // Clarear a imagem
+        for (int i = 0; i < imagem.linhas; i++) {
+            for (int j = 0; j < imagem.colunas; j++) {
+                int novoPixel = imagem.pixels[i][j] + brilho;
+                imagem.pixels[i][j] = min(imagem.valormax, novoPixel); // Garante que o valor não ultrapasse o máximo
+            }
+        }
+        cout << endl << "Brilho aumentado com sucesso!" << endl << endl;
+    } else if (opbrilho == 2) { // Escurecer a imagem
+        for (int i = 0; i < imagem.linhas; i++) {
+            for (int j = 0; j < imagem.colunas; j++) {
+                int novoPixel = imagem.pixels[i][j] - brilho;
+                imagem.pixels[i][j] = max(0, novoPixel); // Garante que o valor não seja menor que 0
+            }
+        }
+        cout << endl << "Brilho diminuído com sucesso!" << endl << endl;
     }
 }
 
@@ -91,6 +113,19 @@ void iconizarImagem(imagemPGM &imagem, int tamanhoBloco) {
     imagem.colunas = novaLargura;
 }
 
+// Função para gerar ruídos na imagem
+void gerarRuidos(imagemPGM &imagem, int nivelRuido) {
+    srand(time(NULL));
+
+    for (int i = 0; i < imagem.linhas; i++) {
+        for (int j = 0; j < imagem.colunas; j++) {
+            int ruido = rand() % (nivelRuido + 1) - nivelRuido / 2;
+            imagem.pixels[i][j] = min(imagem.valormax, max(0, imagem.pixels[i][j] + ruido));
+        }
+    }
+
+    cout << endl << "Ruído adicionado à imagem com sucesso!" << endl << endl;
+}
 
 // Função para reescrever a imagem modificada em um novo arquivo .pgm
 void finalizarImagem(imagemPGM &imagem, ofstream &arquivoescrita) {
@@ -105,6 +140,13 @@ void finalizarImagem(imagemPGM &imagem, ofstream &arquivoescrita) {
         }
         arquivoescrita << endl;
     }
+}
+
+// Função implementada somente para melhorar a experiência do usuário, adicionar um delay entre as reaprições do menu.
+void delay(int seconds) {
+    clock_t endwait;
+    endwait = clock() + seconds * CLOCKS_PER_SEC;
+    while (clock() < endwait) {}
 }
 
 int main() {
@@ -124,7 +166,7 @@ int main() {
     int limiar;
     int tamanhoBloco = 8; // Tamanho padrão do bloco para iconizar
 
-    while (opdesejada != 7) {
+    do {
         cout << "Processamento de Imagem" << endl;
         cout << endl << "Opções Disponíveis: " << endl;
         cout << endl << "1 - Alterar o Brilho da Imagem" << endl << "2 - Encontrar a Imagem Negativa" << endl << "3 - Binarizar a Imagem" << endl << "4 - Iconizar a Imagem";
@@ -149,37 +191,49 @@ int main() {
                 if (opbrilho == 1) {
                     cout << endl << "Digite a % de brilho que você deseja adicionar a imagem: ";
                     cin >> brilho;
-                    while (brilho == 0 || brilho > 100) {
+                    while (brilho <= 0 || brilho > 100) {
                         cout << endl << "Você escolheu uma % inválida!!! Digite novamente: ";
                         cin >> brilho;
                     }
-                    brilho /= 100;
-                    /* alterarbrilho(imagem, opbrilho, brilho); */
+                    brilho = brilho * 255 / 100;
+                    alterarbrilho(imagem, opbrilho, brilho); 
                 } else if (opbrilho == 2) {
                     cout << endl << "Digite a % de brilho que você deseja retirar da imagem: ";
                     cin >> brilho;
-                    while (brilho == 0 || brilho > 100) {
+                    while (brilho <= 0 || brilho > 100) {
                         cout << endl << "Você escolheu uma % inválida!!! Digite novamente: ";
                         cin >> brilho;
                     }
-                    brilho /= 100;
-                    /* alterarbrilho(imagem, opbrilho, brilho); */
+                    brilho = brilho * 255 / 100;
+                    alterarbrilho(imagem, opbrilho, brilho);
                 }
                 break;
             case 2:
                 encontrarNegativa(imagem);
+                cout << endl << "Negativando imagem..." << endl << endl;
+                cout << endl << "Imagem negativada com sucesso!" << endl << endl;
                 break;
             case 3:
-                cout << "Digite o valor do limiar para binarizar a imagem: ";
+                cout << endl << "Digite o valor do limiar para binarizar a imagem: ";
                 cin >> limiar;
                 binarizarImagem(imagem, limiar);
+                cout << endl << "Imagem binarizada com sucesso!" << endl << endl;
                 break;
             case 4:
                 iconizarImagem(imagem, tamanhoBloco);
-                cout << endl << "Pixelização concluída." << endl << endl;
+                cout << endl << "Pixelização concluída!" << endl << endl;
+                break;
+            case 5:
+                int nivelRuido;
+                cout <<  endl << "Digite o nível de ruído desejado: ";
+                cin >> nivelRuido;
+                gerarRuidos(imagem, nivelRuido);
                 break;
         }
-    }
+        delay(1);
+    } while (opdesejada != 7);
+
+    cout << endl << "Finalizando o programa..." << endl;
 
     ofstream arquivoescrita("imgmod.pgm");
     if (!arquivoescrita.is_open()) {
@@ -195,8 +249,6 @@ int main() {
         delete[] imagem.pixels[i];
     }
     delete[] imagem.pixels;
-    
-    return 0;
-    
-}
 
+    return 0;
+}
