@@ -11,6 +11,7 @@ typedef struct {
     int linhas;
     int valormax;
     int** pixels;
+    int** pixelsOriginal; // Adicionando matriz para armazenar a imagem original (Aplicar filtro posteriormente)
 } imagemPGM;
 
 // Função para ler a imagem original em formato .pgm
@@ -22,17 +23,21 @@ void lerImagem(imagemPGM &imagem, ifstream &arquivoleitura) {
 
     // Alocando Memória para a variável pixels conforme as colunas e linhas da matriz presente na imagem
     imagem.pixels = new int*[imagem.linhas];
+    imagem.pixelsOriginal = new int*[imagem.linhas]; 
     for (int i = 0; i < imagem.linhas; i++) {
         imagem.pixels[i] = new int[imagem.colunas];
+        imagem.pixelsOriginal[i] = new int[imagem.colunas]; 
         for (int j = 0; j < imagem.colunas; j++) {
             arquivoleitura >> imagem.pixels[i][j];
+            imagem.pixelsOriginal[i][j] = imagem.pixels[i][j];
         }
     }
 }
 
 // Função para alterar o brilho da imagem
 void alterarbrilho(imagemPGM &imagem, int opbrilho, int brilho) {
-    if (opbrilho == 1) { // Clarear a imagem
+    // Clarear a imagem
+    if (opbrilho == 1) { 
         for (int i = 0; i < imagem.linhas; i++) {
             for (int j = 0; j < imagem.colunas; j++) {
                 int novoPixel = imagem.pixels[i][j] + brilho;
@@ -125,6 +130,50 @@ void gerarRuidos(imagemPGM &imagem, int nivelRuido) {
     }
 
     cout << endl << "Ruído adicionado à imagem com sucesso!" << endl << endl;
+}
+
+// Função para aplicar filtro médio na imagem
+void aplicarFiltro(imagemPGM &imagem, int tamanhoFiltro) {
+    // Matriz temporária para armazenar os pixels modificados
+    int** tempPixels = new int*[imagem.linhas];
+    for (int i = 0; i < imagem.linhas; i++) {
+        tempPixels[i] = new int[imagem.colunas];
+    }
+
+    // Aplicando o filtro de média
+    for (int i = 0; i < imagem.linhas; i++) {
+        for (int j = 0; j < imagem.colunas; j++) {
+            int soma = 0;
+            int contador = 0;
+
+            // Calculando a média dos pixels ao redor
+            for (int x = max(0, i - tamanhoFiltro); x <= min(imagem.linhas - 1, i + tamanhoFiltro); x++) {
+                for (int y = max(0, j - tamanhoFiltro); y <= min(imagem.colunas - 1, j + tamanhoFiltro); y++) {
+                    soma += imagem.pixelsOriginal[x][y]; // Utiliza a matriz original
+                    contador++;
+                }
+            }
+
+            // Calculando a média
+            int media = soma / contador;
+            tempPixels[i][j] = media;
+        }
+    }
+
+    // Copiando os pixels filtrados de volta para a matriz principal
+    for (int i = 0; i < imagem.linhas; i++) {
+        for (int j = 0; j < imagem.colunas; j++) {
+            imagem.pixels[i][j] = tempPixels[i][j];
+        }
+    }
+
+    // Liberando memória da matriz temporária
+    for (int i = 0; i < imagem.linhas; i++) {
+        delete[] tempPixels[i];
+    }
+    delete[] tempPixels;
+
+    cout << endl << "Filtro aplicado com sucesso!" << endl << endl;
 }
 
 // Função para reescrever a imagem modificada em um novo arquivo .pgm
@@ -229,6 +278,13 @@ int main() {
                 cin >> nivelRuido;
                 gerarRuidos(imagem, nivelRuido);
                 break;
+            case 6:
+                int tamanhoFiltro;
+                cout << endl << "Digite o tamanho do filtro (em pixels) para aplicar na imagem: ";
+                cin >> tamanhoFiltro;
+                int tamanhoMaximoFiltro = min(imagem.colunas, imagem.linhas) / 2;
+                aplicarFiltro(imagem, tamanhoFiltro);
+                break;
         }
         delay(1);
     } while (opdesejada != 7);
@@ -247,8 +303,10 @@ int main() {
     // Liberação da memória alocada para a matriz de pixels
     for (int i = 0; i < imagem.linhas; i++) {
         delete[] imagem.pixels[i];
+        delete[] imagem.pixelsOriginal[i];
     }
     delete[] imagem.pixels;
+    delete[] imagem.pixelsOriginal;
 
     return 0;
 }
